@@ -1,17 +1,28 @@
 // utils/parsers/alphaParsers.js
 
-export function parseNOTAM(item) {
-  // Remove leading and trailing parentheses from raw field
-  let raw = item.raw || '';
+function stripParens(raw) {
+  if (!raw) return '';
   raw = raw.trim();
   if (raw.startsWith('(') && raw.endsWith(')')) {
-    raw = raw.slice(1, -1);
+    return raw.slice(1, -1);
   }
   return raw;
 }
 
-// Upper Wind parser unchanged, but can be customized for text block output
+export function parseNOTAM(item) {
+  return stripParens(item.raw || item.text || '');
+}
+export function parseSIGMET(item) {
+  return stripParens(item.raw || item.text || '');
+}
+export function parseAIRMET(item) {
+  return stripParens(item.raw || item.text || '');
+}
+export function parsePIREP(item) {
+  return stripParens(item.raw || item.text || '');
+}
 export function parseUpperWind(item) {
+  // unchanged
   let arr;
   try {
     arr = typeof item.text === 'string' ? JSON.parse(item.text) : item.text;
@@ -31,7 +42,6 @@ export function parseUpperWind(item) {
     const endH = new Date(frameEnd).getUTCHours().toString().padStart(2, '0');
     usePeriod = `${startH}-${endH}`;
   }
-
   const site = item.site || zone || '';
 
   return {
@@ -55,7 +65,3 @@ export function parseUpperWind(item) {
     })) : []
   };
 }
-
-export function parseSIGMET(item) { return item; }
-export function parseAIRMET(item) { return item; }
-export function parsePIREP(item) { return item; }
