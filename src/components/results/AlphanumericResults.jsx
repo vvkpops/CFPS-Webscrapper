@@ -14,23 +14,39 @@ const tableRenderers = {
       <table className="min-w-full bg-white border rounded">
         <thead>
           <tr className="bg-blue-50">
-            <th className="p-2 text-left">Number</th>
+            <th className="p-2 text-left">Header</th>
+            <th className="p-2 text-left">FIR</th>
+            <th className="p-2 text-left">Subject</th>
+            <th className="p-2 text-left">Traffic</th>
+            <th className="p-2 text-left">Purpose</th>
+            <th className="p-2 text-left">Scope</th>
+            <th className="p-2 text-left">Lower</th>
+            <th className="p-2 text-left">Upper</th>
+            <th className="p-2 text-left">Coordinates</th>
             <th className="p-2 text-left">Location</th>
             <th className="p-2 text-left">Validity</th>
-            <th className="p-2 text-left">Subject</th>
-            <th className="p-2 text-left">Text</th>
+            <th className="p-2 text-left">Text (EN)</th>
+            <th className="p-2 text-left">Text (FR)</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, idx) => {
             const parsed = parseNOTAM(item);
             return (
-              <tr key={idx} className="border-t">
-                <td className="p-2">{parsed.number}</td>
+              <tr key={idx} className="border-t align-top">
+                <td className="p-2 font-mono text-xs">{parsed.header}</td>
+                <td className="p-2">{parsed.FIR}</td>
+                <td className="p-2">{parsed.Subject}</td>
+                <td className="p-2">{parsed.Traffic}</td>
+                <td className="p-2">{parsed.Purpose}</td>
+                <td className="p-2">{parsed.Scope}</td>
+                <td className="p-2">{parsed.Lower}</td>
+                <td className="p-2">{parsed.Upper}</td>
+                <td className="p-2">{parsed.Coordinates}</td>
                 <td className="p-2">{parsed.location}</td>
-                <td className="p-2">{parsed.validity}</td>
-                <td className="p-2">{parsed.subject}</td>
-                <td className="p-2 text-xs">{parsed.text}</td>
+                <td className="p-2 text-xs whitespace-pre-line">{parsed.validity}</td>
+                <td className="p-2 text-xs whitespace-pre-line">{parsed.text}</td>
+                <td className="p-2 text-xs whitespace-pre-line">{parsed.text_fr || ''}</td>
               </tr>
             );
           })}
