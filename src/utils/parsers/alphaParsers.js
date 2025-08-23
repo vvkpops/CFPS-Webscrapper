@@ -1,7 +1,26 @@
 // utils/parsers/alphaParsers.js
 
+export function parseNOTAM(item) {
+  // Prefer 'english' field if present
+  if (item.english) return item.english;
+  if (item.french) return item.french;
+
+  // Extract only the E) section from raw
+  if (item.raw) {
+    const match = item.raw.match(/E\)\s*([\s\S]*)/);
+    if (match) {
+      // Remove any trailing parenthesis or whitespace
+      return match[1].trim();
+    }
+    // Fallback: return the whole raw text
+    return item.raw;
+  }
+  return '';
+}
+
+// Other parsers unchanged
 export function parseUpperWind(item) {
-  // item.text is the JSON array as string or array
+  // ... previous logic ...
   let arr;
   try {
     arr = typeof item.text === 'string' ? JSON.parse(item.text) : item.text;
@@ -16,7 +35,6 @@ export function parseUpperWind(item) {
     levels
   ] = arr;
 
-  // Try to infer use period from frameStart/frameEnd
   let usePeriod = '';
   if (frameStart && frameEnd) {
     const startH = new Date(frameStart).getUTCHours().toString().padStart(2, '0');
@@ -24,7 +42,6 @@ export function parseUpperWind(item) {
     usePeriod = `${startH}-${endH}`;
   }
 
-  // Try to get site from item.site or zone
   const site = item.site || zone || '';
 
   return {
@@ -49,12 +66,6 @@ export function parseUpperWind(item) {
   };
 }
 
-export function parseNOTAM(item) {
-  // Just return the raw info
-  return item;
-}
-
-// (SIGMET/AIRMET/PIREP unchanged)
 export function parseSIGMET(item) { return item; }
 export function parseAIRMET(item) { return item; }
 export function parsePIREP(item) { return item; }
