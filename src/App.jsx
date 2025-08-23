@@ -10,6 +10,7 @@ import ProgressPanel from './components/progress/ProgressPanel.jsx';
 import StatisticsPanel from './components/progress/StatisticsPanel.jsx';
 import ExportPanel from './components/export/ExportPanel.jsx';
 import TabbedResults from './components/results/TabbedResults.jsx';
+import APIDebugPanel from './components/debug/APIDebugPanel.jsx';
 
 // Hooks
 import { useWeatherData } from './hooks/useWeatherData.js';
@@ -34,6 +35,7 @@ const CFPSWxScraper = () => {
   });
 
   const [showGFAMap, setShowGFAMap] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(true); // Show debug panel by default due to API issues
 
   // Custom hooks
   const weatherData = useWeatherData();
@@ -96,6 +98,170 @@ const CFPSWxScraper = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            🌤️ Complete CFPS WxRecall Scraper
+          </h1>
+          <p className="text-lg text-gray-600">
+            Advanced weather data collection tool for Canadian Flight Planning System
+          </p>
+          
+          {/* API Status Warning */}
+          <div className="mt-4 bg-yellow-100 border border-yellow-300 p-3 rounded-lg">
+            <p className="text-yellow-800 text-sm">
+              ⚠️ <strong>API Issues Detected:</strong> All requests are returning 404 errors. 
+              Use the debug panel below to diagnose connectivity issues.
+            </p>
+          </div>
+        </div>
+
+        {/* Debug Panel - Show by default due to API issues */}
+        {showDebugPanel && <APIDebugPanel />}
+        
+        <div className="text-center mb-6">
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            {showDebugPanel ? '▼ Hide Debug Panel' : '▶ Show Debug Panel'}
+          </button>
+        </div>
+
+        {/* Configuration */}
+        <ConfigurationPanel 
+          config={config}
+          onConfigChange={setConfig}
+          onGFAMapToggle={() => setShowGFAMap(!showGFAMap)}
+          showGFAMap={showGFAMap}
+        />
+
+        {/* Data Selection */}
+        <DataSelectionPanel 
+          selectedData={selectedData}
+          onDataChange={setSelectedData}
+        />
+
+        {/* Controls */}
+        <ControlPanel 
+          isScrapingActive={scrapingState.isScrapingActive}
+          onFetch={() => weatherFetching.fetchWeatherData()}
+          onStartContinuous={handleStartContinuous}
+          onStopContinuous={scrapingState.stopContinuous}
+          onClear={handleClear}
+          onDebug={weatherFetching.debugGFAAPI}
+          onTest={weatherFetching.testIndividualFetches}
+        />
+
+        {/* Progress */}
+        <ProgressPanel 
+          progress={scrapingState.progress}
+          status={scrapingState.status}
+          isVisible={scrapingState.progress > 0 || Object.keys(fetchProgress.fetchProgress).length > 0}
+          fetchProgress={fetchProgress.fetchProgress}
+        />
+
+        {/* Statistics */}
+        <StatisticsPanel 
+          stats={weatherData.stats}
+          isVisible={weatherData.stats.total > 0}
+        />
+
+        {/* Export */}
+        <ExportPanel 
+          onExportJSON={handleExportJSON}
+          onExportCSV={handleExportCSV}
+          onExportHTML={handleExportHTML}
+          hasData={weatherData.allData.length > 0}
+        />
+
+        {/* Results */}
+        <TabbedResults results={weatherData.results} />
+      </div>
+    </div>
+  );
+};
+
+export default CFPSWxScraper;2">
+            🌤️ Complete CFPS WxRecall Scraper
+          </h1>
+          <p className="text-lg text-gray-600">
+            Advanced weather data collection tool for Canadian Flight Planning System
+          </p>
+          
+          {/* API Status Warning */}
+          <div className="mt-4 bg-yellow-100 border border-yellow-300 p-3 rounded-lg">
+            <p className="text-yellow-800 text-sm">
+              ⚠️ <strong>API Issues Detected:</strong> All requests are returning 404 errors. 
+              Use the debug panel below to diagnose connectivity issues.
+            </p>
+          </div>
+        </div>
+
+        {/* Debug Panel - Show by default due to API issues */}
+        {showDebugPanel && <APIDebugPanel />}
+        
+        <div className="text-center mb-6">
+          <button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            {showDebugPanel ? '▼ Hide Debug Panel' : '▶ Show Debug Panel'}
+          </button>
+        </div>
+
+        {/* Configuration */}
+        <ConfigurationPanel 
+          config={config}
+          onConfigChange={setConfig}
+          onGFAMapToggle={() => setShowGFAMap(!showGFAMap)}
+          showGFAMap={showGFAMap}
+        />
+
+        {/* Data Selection */}
+        <DataSelectionPanel 
+          selectedData={selectedData}
+          onDataChange={setSelectedData}
+        />
+
+        {/* Controls */}
+        <ControlPanel 
+          isScrapingActive={scrapingState.isScrapingActive}
+          onFetch={() => weatherFetching.fetchWeatherData()}
+          onStartContinuous={handleStartContinuous}
+          onStopContinuous={scrapingState.stopContinuous}
+          onClear={handleClear}
+          onDebug={weatherFetching.debugGFAAPI}
+          onTest={weatherFetching.testIndividualFetches}
+        />
+
+        {/* Progress */}
+        <ProgressPanel 
+          progress={scrapingState.progress}
+          status={scrapingState.status}
+          isVisible={scrapingState.progress > 0 || Object.keys(fetchProgress.fetchProgress).length > 0}
+          fetchProgress={fetchProgress.fetchProgress}
+        />
+
+        {/* Statistics */}
+        <StatisticsPanel 
+          stats={weatherData.stats}
+          isVisible={weatherData.stats.total > 0}
+        />
+
+        {/* Export */}
+        <ExportPanel 
+          onExportJSON={handleExportJSON}
+          onExportCSV={handleExportCSV}
+          onExportHTML={handleExportHTML}
+          hasData={weatherData.allData.length > 0}
+        />
+
+        {/* Results */}
+        <TabbedResults results={weatherData.results} />
+      </div>
+    </div>
+  );
+};
+
+export default CFPSWxScraper;2">
             🌤️ Complete CFPS WxRecall Scraper
           </h1>
           <p className="text-lg text-gray-600">
