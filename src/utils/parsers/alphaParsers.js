@@ -1,92 +1,152 @@
 // src/utils/parsers/alphaParsers.js
-// Utility parsers for alphanumeric products (NOTAM, METAR, TAF, SIGMET, AIRMET, PIREP, Upper Winds)
-// Goal: provide a simple, robust "give me the raw text" parser for most alpha products
-// and a small helper for Upper Winds formatting.
+// Robust parsers for alphanumeric products (NOTAM, METAR, TAF, SIGMET, AIRMET, PIREP, Upper Winds)
+// Goal: always prefer human readable raw text and handle multiple shapes the API may return.
 
-function stripParens(raw) {
-  if (!raw) return '';
-  raw = String(raw).trim();
-  // Remove leading/trailing parentheses that wrap the entire NOTAM block
-  if (raw.startsWith('(') && raw.endsWith(')')) {
-    raw = raw.slice(1, -1).trim();
+function stripSurroundingParens(s) {
+  if (!s) return '';
+  s = String(s).trim();
+  if (s.startsWith('(') && s.endsWith(')')) {
+    return s.slice(1, -1).trim();
   }
-  return raw;
+  return s;
 }
 
 /**
- * Return the best human-readable text for an alpha item.
+ * Try to normalize any "raw" like value into a plain text string.
+ * Handles:
+ * - direct string raw
+ * - raw that is JSON encoded (double encoded)
+ * - objects with raw/text/english/french fields
+ * - arrays (will be stringified)
+ */
+function extractRawField(val) {
+  if (val === null || val === undefined) return '';
+
+  // If it's already a string, try to parse JSON inside it if it looks encoded
+  if (typeof val === 'string') {
+    let s = val.trim();
+
+    // If the string itself is a JSON object/array, try to parse it and extract nested raw/text
+    if ((s.startsWith('{') || s.startsWith('[')) ) {
+      try {
+        const parsed = JSON.parse(s);
+        // prefer parsed.raw / parsed.text / parsed.english
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.english && typeof parsed.english === 'string' && parsed.english.trim()) return stripSurroundingParens(parsed.english);
+          if (parsed.raw && typeof parsed.raw === 'string' && parsed.raw.trim()) return stripSurroundingParens(parsed.raw);
+          if (parsed.text && typeof parsed.text === 'string' && parsed.text.trim()) return stripSurroundingParens(parsed.text);
+          // fallback to stringify parsed (but not ideal)
+          return JSON.stringify(parsed, null, 2);
+        }
+      } catch (e) {
+        // not JSON, continue
+      }
+    }
+
+    // plain string, remove surrounding parentheses if present
+    return stripSurroundingParens(s);
+  }
+
+  // If it's an object, try common keys
+  if (typeof val === 'object') {
+    // If it's an Array, join items if primitives or stringify
+    if (Array.isArray(val)) {
+      // If array of strings, join with double line breaks
+      if (val.every(v => typeof v === 'string')) {
+        return val.map(v => stripSurroundingParens(v)).join('\n\n');
+      }
+      try {
+        return JSON.stringify(val, null, 2);
+      } catch {}
+    }
+
+    // prefer english / french / raw / text / body keys
+    const preferred = ['english', 'raw', 'text', 'body', 'report', 'metar', 'taf', 'message', 'remarks'];
+    for (const k of preferred) {
+      if (val[k] && typeof val[k] === 'string' && val[k].trim()) {
+        return stripSurroundingParens(val[k]);
+      }
+    }
+
+    // If object contains nested raw fields as object, try to dig one level
+    for (const k of Object.keys(val)) {
+      const v = val[k];
+      if (typeof v === 'string' && v.trim().length > 0) {
+        // if this string looks like a raw notam block (contains "E)" or "Q)"), return it
+        if (v.includes('E)') || v.includes('Q)') || v.includes('NOTAM')) {
+          return stripSurroundingParens(v);
+        }
+      }
+    }
+
+    // last resort: stringify the object
+    try {
+      return JSON.stringify(val, null, 2);
+    } catch (err) {
+      return String(val);
+    }
+  }
+
+  // Fallback primitive conversion
+  return String(val);
+}
+
+/**
+ * Public parser used by UI to get a plain text representation for alpha products.
  * Preference order:
- *  - item.english (if present)
- *  - item.raw (strip surrounding parentheses)
- *  - item.text
- *  - item.report / item.metar / item.taf / item.body (common keys)
- *  - if item is a string, return it
+ *  - item.english (if string and present)
+ *  - item.raw (if present)
+ *  - item.text, item.body, item.report, item.metar, item.taf
+ *  - if item is string -> return it cleaned
  *  - fallback to JSON.stringify(item)
  */
 export function parseRawAlpha(item) {
-  if (!item && item !== '') return '';
+  if (item === null || item === undefined) return '';
 
-  // If item already a string, return as-is
-  if (typeof item === 'string') {
-    return item.trim();
-  }
+  // If item is already a string, return cleaned version
+  if (typeof item === 'string') return extractRawField(item);
 
-  // Prefer an explicit english translation
+  // Item is object: prefer explicit english/french textual fields
   if (item.english && typeof item.english === 'string' && item.english.trim()) {
-    return stripParens(item.english);
+    return extractRawField(item.english);
+  }
+  if (item.french && typeof item.french === 'string' && item.french.trim()) {
+    return extractRawField(item.french);
   }
 
-  // Prefer raw field (common for NOTAM)
-  if (item.raw && typeof item.raw === 'string' && item.raw.trim()) {
-    return stripParens(item.raw);
-  }
+  // Common 'raw' location
+  if (item.raw) return extractRawField(item.raw);
 
-  // Common fallback fields
-  const fallbackFields = ['text', 'report', 'metar', 'taf', 'body', 'remarks', 'message'];
-  for (const f of fallbackFields) {
-    if (item[f] && typeof item[f] === 'string' && item[f].trim()) {
-      return stripParens(item[f]);
+  // Other common fields
+  const otherFields = ['text', 'body', 'report', 'metar', 'taf', 'message', 'remarks'];
+  for (const f of otherFields) {
+    if (item[f] && (typeof item[f] === 'string' || typeof item[f] === 'object')) {
+      return extractRawField(item[f]);
     }
   }
 
-  // If item contains both english/french as objects, attempt to join
-  if (item.english && typeof item.english === 'object' && item.english.raw) {
-    return stripParens(item.english.raw);
-  }
-  if (item.french && typeof item.french === 'object' && item.french.raw) {
-    return stripParens(item.french.raw);
-  }
-
-  // If item has a `text` which is JSON (stringified), try parse then return
-  if (typeof item.text === 'string') {
-    try {
-      const parsed = JSON.parse(item.text);
-      if (typeof parsed === 'string') return parsed.trim();
-      if (parsed && typeof parsed === 'object') return JSON.stringify(parsed, null, 2);
-    } catch {
-      // not JSON, continue
-      return stripParens(item.text);
-    }
+  // item might itself be an array of objects (e.g., API returns array)
+  if (Array.isArray(item)) {
+    // join multiple entries with separators
+    const parts = item.map(it => (typeof it === 'string' ? extractRawField(it) : parseRawAlpha(it)));
+    return parts.join('\n\n');
   }
 
-  // If item has nested data (e.g., { data: {...} }) try to stringify useful parts
-  if (item.data && (typeof item.data === 'string' || Array.isArray(item.data))) {
-    try {
-      if (typeof item.data === 'string') return stripParens(item.data);
-      return JSON.stringify(item.data, null, 2);
-    } catch {}
+  // If item has nested `data` with array, attempt to extract each entry
+  if (item.data && Array.isArray(item.data)) {
+    const parts = item.data.map(d => parseRawAlpha(d));
+    return parts.join('\n\n');
   }
 
-  // Last resort: stringify object
+  // Fallback to safe stringify
   try {
     return JSON.stringify(item, null, 2);
-  } catch (err) {
+  } catch {
     return String(item);
   }
 }
 
-// --- UPPER WINDS parser ---
-// Accepts item.text (stringified JSON array) or item (already array)
+// --- UPPER WINDS parser --- (unchanged aside from exporting only parseUpperWind)
 export function parseUpperWind(item) {
   let arr;
   try {
@@ -99,8 +159,6 @@ export function parseUpperWind(item) {
     return { error: 'Upper wind payload is not an array', raw: arr };
   }
 
-  // The expected array structure from examples:
-  // [zone, source, issueTime, validStart, validEnd, frameStart, frameEnd, ..., levelsArray]
   const [
     zone,
     source,
@@ -116,7 +174,6 @@ export function parseUpperWind(item) {
     levels
   ] = arr;
 
-  // Build readable levels
   const parsedLevels = Array.isArray(levels)
     ? levels.map(lvl => ({
         altitude_ft: lvl[0],
@@ -127,7 +184,6 @@ export function parseUpperWind(item) {
       }))
     : [];
 
-  // Infer site name if present on the item
   const site = item.site || item.station || item.icao || zone || '';
 
   // infer usePeriod if frameStart/frameEnd present
