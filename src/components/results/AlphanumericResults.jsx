@@ -1,18 +1,16 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
-import { parseNOTAM, parseUpperWind, parseSIGMET, parseAIRMET, parsePIREP } from '../../utils/parsers/alphaParsers.js';
+import { parseNOTAM, parseSIGMET, parseAIRMET, parsePIREP, parseUpperWind } from '../../utils/parsers/alphaParsers.js';
 
-// Helper for NOTAM ICAO extraction
+// Helper for ICAO extraction from raw text (A) line
 function getICAOFromRaw(raw) {
   const match = raw.match(/A\)\s*([A-Z]{4})/);
   return match ? match[1] : '';
 }
 
-// Helper for Upper Wind text formatting (matches example screenshot)
+// Helper for Upper Wind text formatting
 function formatUpperWindText(parsed) {
   if (parsed.error || !parsed.levels || !parsed.levels.length) return 'No data';
-
-  // Collect all altitudes present in this block
   const altitudes = parsed.levels.map(lvl => lvl.altitude_ft);
   const altitudeSet = Array.from(new Set(altitudes)).sort((a, b) => a - b);
 
@@ -38,29 +36,39 @@ function formatUpperWindText(parsed) {
   return `${validStr}\n${altLine}\n${parsed.site || parsed.zone || ''} ${windLine}`;
 }
 
-const tableRenderers = {
-  notam: (items) => (
+// Generic renderer for raw text types (NOTAM, SIGMET, AIRMET, PIREP)
+function RawBoxRenderer(items, parser, label = 'RAW') {
+  return (
     <div className="space-y-4">
       {items.map((item, idx) => {
-        const displayText = parseNOTAM(item);
+        const displayText = parser(item);
         const icao = getICAOFromRaw(displayText);
         return (
           <div key={idx} className="grid grid-cols-[100px_1fr] gap-0 bg-white border rounded-lg overflow-hidden shadow-sm">
             {/* Left column */}
             <div className="bg-gray-50 border-r flex flex-col justify-center items-start py-4 px-3 text-xs font-mono min-h-full">
-              <div className="font-bold">NOTAM</div>
+              <div className="font-bold">{label}</div>
               <div>{icao}</div>
             </div>
-            {/* Right column: NOTAM text */}
+            {/* Right column: raw content */}
             <div className="p-4">
-              <pre className="font-mono text-xs whitespace-pre-line">{displayText}</pre>
+              <pre className="font-mono text-xs whitespace-pre-line">
+                {displayText || 'No raw data available.'}
+              </pre>
             </div>
           </div>
         );
       })}
     </div>
-  ),
-  upperwind: (items) => (
+  );
+}
+
+const tableRenderers = {
+  notam: items => RawBoxRenderer(items, parseNOTAM, 'NOTAM'),
+  sigmet: items => RawBoxRenderer(items, parseSIGMET, 'SIGMET'),
+  airmet: items => RawBoxRenderer(items, parseAIRMET, 'AIRMET'),
+  pirep: items => RawBoxRenderer(items, parsePIREP, 'PIREP'),
+  upperwind: items => (
     <div className="space-y-4">
       {items.map((item, idx) => {
         const parsed = parseUpperWind(item);
@@ -74,93 +82,6 @@ const tableRenderers = {
           </pre>
         );
       })}
-    </div>
-  ),
-  sigmet: (items) => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border rounded">
-        <thead>
-          <tr className="bg-purple-50">
-            <th className="p-2 text-left">ID</th>
-            <th className="p-2 text-left">Region</th>
-            <th className="p-2 text-left">Validity</th>
-            <th className="p-2 text-left">Phenomenon</th>
-            <th className="p-2 text-left">Text</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, idx) => {
-            const parsed = parseSIGMET(item);
-            return (
-              <tr key={idx} className="border-t">
-                <td className="p-2">{parsed.id}</td>
-                <td className="p-2">{parsed.region}</td>
-                <td className="p-2">{parsed.validity}</td>
-                <td className="p-2">{parsed.phenomenon}</td>
-                <td className="p-2 text-xs">{parsed.text}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  ),
-  airmet: (items) => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border rounded">
-        <thead>
-          <tr className="bg-green-50">
-            <th className="p-2 text-left">ID</th>
-            <th className="p-2 text-left">Region</th>
-            <th className="p-2 text-left">Validity</th>
-            <th className="p-2 text-left">Phenomenon</th>
-            <th className="p-2 text-left">Text</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, idx) => {
-            const parsed = parseAIRMET(item);
-            return (
-              <tr key={idx} className="border-t">
-                <td className="p-2">{parsed.id}</td>
-                <td className="p-2">{parsed.region}</td>
-                <td className="p-2">{parsed.validity}</td>
-                <td className="p-2">{parsed.phenomenon}</td>
-                <td className="p-2 text-xs">{parsed.text}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  ),
-  pirep: (items) => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border rounded">
-        <thead>
-          <tr className="bg-yellow-50">
-            <th className="p-2 text-left">Type</th>
-            <th className="p-2 text-left">Location</th>
-            <th className="p-2 text-left">Time</th>
-            <th className="p-2 text-left">Details</th>
-            <th className="p-2 text-left">Text</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, idx) => {
-            const parsed = parsePIREP(item);
-            return (
-              <tr key={idx} className="border-t">
-                <td className="p-2">{parsed.type}</td>
-                <td className="p-2">{parsed.location}</td>
-                <td className="p-2">{parsed.time}</td>
-                <td className="p-2">{parsed.details}</td>
-                <td className="p-2 text-xs">{parsed.text}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </div>
   ),
 };
