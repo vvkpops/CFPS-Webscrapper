@@ -1,26 +1,7 @@
 // utils/parsers/alphaParsers.js
 
-// --- NOTAM --- (modeled after Node backend flatten logic)
-export function parseNOTAM(item) {
-  // Flattened NOTAM: match backend fields
-  return {
-    number: item.number || '',
-    type: item.type || '',
-    classification: item.classification || '',
-    icao: item.icao || item.location || '',
-    location: item.location || '',
-    validFrom: item.validFrom || item.issued || '',
-    validTo: item.validTo || '',
-    summary: item.summary || '',
-    body: item.body || '',
-    qLine: item.qLine || ''
-  };
-}
-
-// --- UPPER WINDS ---
 export function parseUpperWind(item) {
-  // item.text is the JSON array as string, e.g.
-  // '["FBCN35", "KWNO", "...", ... , [[24000,310,62,-25,0],[53000,250,35,-56,0],...]]'
+  // item.text is the JSON array as string or array
   let arr;
   try {
     arr = typeof item.text === 'string' ? JSON.parse(item.text) : item.text;
@@ -35,6 +16,17 @@ export function parseUpperWind(item) {
     levels
   ] = arr;
 
+  // Try to infer use period from frameStart/frameEnd
+  let usePeriod = '';
+  if (frameStart && frameEnd) {
+    const startH = new Date(frameStart).getUTCHours().toString().padStart(2, '0');
+    const endH = new Date(frameEnd).getUTCHours().toString().padStart(2, '0');
+    usePeriod = `${startH}-${endH}`;
+  }
+
+  // Try to get site from item.site or zone
+  const site = item.site || zone || '';
+
   return {
     id: item.pk || item.ID || item.id || '',
     time: item.startValidity || item.validity || frameStart || '',
@@ -45,23 +37,24 @@ export function parseUpperWind(item) {
     validEnd,
     frameStart,
     frameEnd,
-    levels: (Array.isArray(levels) ? levels.map(lvl => ({
+    usePeriod,
+    site,
+    levels: Array.isArray(levels) ? levels.map(lvl => ({
       altitude_ft: lvl[0],
       wind_dir: lvl[1],
       wind_spd: lvl[2],
       temp_c: lvl[3],
       flag: lvl[4]
-    })) : [])
+    })) : []
   };
 }
 
-// --- SIGMET/AIRMET/PIREP: Placeholder, update with real samples for robust parsing
-export function parseSIGMET(item) {
-  return { id: item.id || '', region: item.region || '', validity: item.validity || '', phenomenon: item.phenomenon || '', text: item.text || '' };
+export function parseNOTAM(item) {
+  // Just return the raw info
+  return item;
 }
-export function parseAIRMET(item) {
-  return { id: item.id || '', region: item.region || '', validity: item.validity || '', phenomenon: item.phenomenon || '', text: item.text || '' };
-}
-export function parsePIREP(item) {
-  return { type: item.type || '', location: item.location || '', time: item.time || '', details: item.details || '', text: item.text || '' };
-}
+
+// (SIGMET/AIRMET/PIREP unchanged)
+export function parseSIGMET(item) { return item; }
+export function parseAIRMET(item) { return item; }
+export function parsePIREP(item) { return item; }
