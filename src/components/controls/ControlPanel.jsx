@@ -11,7 +11,7 @@ const ControlPanel = ({
   onStartContinuous, 
   onStopContinuous, 
   onClear, 
-  onDebug, 
+  // onDebug, // removed from props — debug removed from controls
   onTest 
 }) => {
   return (
@@ -51,12 +51,7 @@ const ControlPanel = ({
           Clear Results
         </Button>
         
-        <Button
-          onClick={onDebug}
-          variant="orange"
-        >
-          🔍 Debug GFA API
-        </Button>
+        {/* Debug button removed from main UI */}
         
         <Button
           onClick={onTest}
