@@ -1,33 +1,23 @@
 // utils/parsers/alphaParsers.js
 
 export function parseNOTAM(item) {
-  // Prefer 'english' field if present
-  if (item.english) return item.english;
-  if (item.french) return item.french;
-
-  // Extract only the E) section from raw
-  if (item.raw) {
-    const match = item.raw.match(/E\)\s*([\s\S]*)/);
-    if (match) {
-      // Remove any trailing parenthesis or whitespace
-      return match[1].trim();
-    }
-    // Fallback: return the whole raw text
-    return item.raw;
+  // Remove leading and trailing parentheses from raw field
+  let raw = item.raw || '';
+  raw = raw.trim();
+  if (raw.startsWith('(') && raw.endsWith(')')) {
+    raw = raw.slice(1, -1);
   }
-  return '';
+  return raw;
 }
 
-// Other parsers unchanged
+// Upper Wind parser unchanged, but can be customized for text block output
 export function parseUpperWind(item) {
-  // ... previous logic ...
   let arr;
   try {
     arr = typeof item.text === 'string' ? JSON.parse(item.text) : item.text;
   } catch {
     return { error: 'Malformed upperwind data', raw: item.text };
   }
-  // Meta fields
   const [
     zone, source, issueTime, validStart, validEnd,
     frameStart, frameEnd,
