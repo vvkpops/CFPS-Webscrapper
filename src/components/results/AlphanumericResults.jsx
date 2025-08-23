@@ -8,46 +8,68 @@ import {
   parseUpperWind
 } from '../../utils/parsers/alphaParsers.js';
 
+// Helper: Format upperwind as text block like your screenshot
+function formatUpperWindText(parsed) {
+  if (parsed.error || !parsed.levels || !parsed.levels.length) return 'No data';
+
+  // Collect all altitudes present in this block
+  const altitudes = parsed.levels.map(lvl => lvl.altitude_ft);
+  // Sort and dedupe
+  const altitudeSet = Array.from(new Set(altitudes)).sort((a, b) => a - b);
+
+  // Compose header: VALID <frameStart> FOR USE <hh>-<hh>
+  let validStr = '';
+  if (parsed.frameStart) {
+    const dt = parsed.frameStart.replace(/[^0-9]/g,'').slice(0,6);
+    validStr = `VALID ${dt}Z FOR USE ${parsed.usePeriod || ''}`;
+  } else {
+    validStr = `VALID FOR USE ${parsed.usePeriod || ''}`;
+  }
+
+  // Compose second line: altitudes
+  let altLine = altitudeSet.map(alt => alt.toString().padStart(5, ' ')).join(' | ');
+  // Compose wind/temps line: values for each altitude
+  let windLine = altitudeSet.map(alt => {
+    const lvl = parsed.levels.find(l => l.altitude_ft === alt);
+    if (!lvl) return '     ';
+    let val = `${lvl.wind_dir.toString().padStart(3, ' ')} ${lvl.wind_spd.toString().padStart(2, ' ')}`;
+    if (lvl.temp_c !== null && lvl.temp_c !== undefined) {
+      val += ` ${lvl.temp_c >= 0 ? '+' : ''}${lvl.temp_c}`;
+    }
+    return val;
+  }).join(' | ');
+
+  return `${validStr}\n${altLine}\n${parsed.site || parsed.zone || ''} ${windLine}`;
+}
+
 const tableRenderers = {
   notam: (items) => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border rounded">
-        <thead>
-          <tr className="bg-blue-50">
-            <th className="p-2 text-left">Number</th>
-            <th className="p-2 text-left">Type</th>
-            <th className="p-2 text-left">Classification</th>
-            <th className="p-2 text-left">ICAO</th>
-            <th className="p-2 text-left">Location</th>
-            <th className="p-2 text-left">Valid From</th>
-            <th className="p-2 text-left">Valid To</th>
-            <th className="p-2 text-left">Q Line</th>
-            <th className="p-2 text-left">Summary</th>
-            <th className="p-2 text-left">Body</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item, idx) => {
-            const parsed = parseNOTAM(item);
-            return (
-              <tr key={idx} className="border-t align-top">
-                <td className="p-2 font-mono text-xs">{parsed.number}</td>
-                <td className="p-2">{parsed.type}</td>
-                <td className="p-2">{parsed.classification}</td>
-                <td className="p-2">{parsed.icao}</td>
-                <td className="p-2">{parsed.location}</td>
-                <td className="p-2 text-xs">{parsed.validFrom}</td>
-                <td className="p-2 text-xs">{parsed.validTo}</td>
-                <td className="p-2 text-xs">{parsed.qLine}</td>
-                <td className="p-2 text-xs whitespace-pre-line">{parsed.summary}</td>
-                <td className="p-2 text-xs whitespace-pre-line">{parsed.body}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      {items.map((item, idx) => (
+        <div key={idx} className="bg-white border rounded-lg p-4 mb-2">
+          <pre className="font-mono text-xs whitespace-pre-line">{item.raw || item.text || JSON.stringify(item, null, 2)}</pre>
+        </div>
+      ))}
     </div>
   ),
+  upperwind: (items) => (
+    <div className="space-y-4">
+      {items.map((item, idx) => {
+        const parsed = parseUpperWind(item);
+        // Compose display using format helper above
+        return (
+          <pre 
+            key={idx}
+            className="font-mono text-xs bg-gray-100 border rounded p-4 whitespace-pre mb-2"
+            style={{overflowX:'auto'}}
+          >
+            {formatUpperWindText(parsed)}
+          </pre>
+        );
+      })}
+    </div>
+  ),
+  // keep other renderers as before
   sigmet: (items) => (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-white border rounded">
@@ -133,49 +155,6 @@ const tableRenderers = {
           })}
         </tbody>
       </table>
-    </div>
-  ),
-  upperwind: (items) => (
-    <div className="space-y-8">
-      {items.map((item, idx) => {
-        const parsed = parseUpperWind(item);
-        if (parsed.error) {
-          return <pre key={idx} className="bg-red-100 p-2 text-sm">{parsed.error}</pre>;
-        }
-        return (
-          <div key={idx} className="bg-white border rounded-lg p-4">
-            <div className="mb-2 font-mono text-xs text-gray-700">
-              <b>Item {idx+1}</b> | <b>ID:</b> {parsed.id} | <b>Zone:</b> {parsed.zone} | <b>Source:</b> {parsed.source}<br/>
-              <b>Frame Start:</b> {parsed.frameStart} | <b>Frame End:</b> {parsed.frameEnd}
-            </div>
-            <div className="mb-2 text-xs text-gray-600">
-              <b>Issued:</b> {parsed.issueTime} | <b>Valid:</b> {parsed.validStart} - {parsed.validEnd}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-gray-50 border rounded">
-                <thead>
-                  <tr className="bg-blue-50">
-                    <th className="p-2 text-left">Altitude (ft)</th>
-                    <th className="p-2 text-left">Wind Dir (°)</th>
-                    <th className="p-2 text-left">Wind Spd (kt)</th>
-                    <th className="p-2 text-left">Temp (°C)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsed.levels.map((lvl, lidx) => (
-                    <tr key={lidx} className="border-t">
-                      <td className="p-2">{lvl.altitude_ft}</td>
-                      <td className="p-2">{lvl.wind_dir}</td>
-                      <td className="p-2">{lvl.wind_spd}</td>
-                      <td className="p-2">{lvl.temp_c !== null && lvl.temp_c !== undefined ? lvl.temp_c : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
     </div>
   ),
 };
