@@ -10,7 +10,7 @@ import ProgressPanel from './components/progress/ProgressPanel.jsx';
 import StatisticsPanel from './components/progress/StatisticsPanel.jsx';
 import ExportPanel from './components/export/ExportPanel.jsx';
 import TabbedResults from './components/results/TabbedResults.jsx';
-import APIDebugPanel from './components/debug/APIDebugPanel.jsx';
+// import APIDebugPanel from './components/debug/APIDebugPanel.jsx'; // removed from main UI
 
 // Hooks
 import { useWeatherData } from './hooks/useWeatherData.js';
@@ -35,7 +35,8 @@ const CFPSWxScraper = () => {
   });
 
   const [showGFAMap, setShowGFAMap] = useState(false);
-  const [showDebugPanel, setShowDebugPanel] = useState(true); // Show debug panel by default due to API issues
+  // Debug panel removed from main screen
+  // const [showDebugPanel, setShowDebugPanel] = useState(true);
 
   // Custom hooks
   const weatherData = useWeatherData();
@@ -103,27 +104,9 @@ const CFPSWxScraper = () => {
           <p className="text-lg text-gray-600">
             Advanced weather data collection tool for Canadian Flight Planning System
           </p>
-          
-          {/* API Status Warning */}
-          <div className="mt-4 bg-yellow-100 border border-yellow-300 p-3 rounded-lg">
-            <p className="text-yellow-800 text-sm">
-              ⚠️ <strong>API Issues Detected:</strong> All requests are returning 404 errors. 
-              Use the debug panel below to diagnose connectivity issues.
-            </p>
-          </div>
         </div>
 
-        {/* Debug Panel - Show by default due to API issues */}
-        {showDebugPanel && <APIDebugPanel />}
-        
-        <div className="text-center mb-6">
-          <button
-            onClick={() => setShowDebugPanel(!showDebugPanel)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            {showDebugPanel ? '▼ Hide Debug Panel' : '▶ Show Debug Panel'}
-          </button>
-        </div>
+        {/* Debug Panel intentionally hidden from main UI */}
 
         {/* Configuration */}
         <ConfigurationPanel 
@@ -146,7 +129,7 @@ const CFPSWxScraper = () => {
           onStartContinuous={handleStartContinuous}
           onStopContinuous={scrapingState.stopContinuous}
           onClear={handleClear}
-          onDebug={weatherFetching.debugGFAAPI}
+          // debug removed from main controls
           onTest={weatherFetching.testIndividualFetches}
         />
 
