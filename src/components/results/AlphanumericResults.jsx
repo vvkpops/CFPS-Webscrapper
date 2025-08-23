@@ -1,75 +1,54 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
-import {
-  parseNOTAM,
-  parseSIGMET,
-  parseAIRMET,
-  parsePIREP,
-  parseUpperWind
-} from '../../utils/parsers/alphaParsers.js';
+import { parseUpperWind, parseSIGMET, parseAIRMET, parsePIREP } from '../../utils/parsers/alphaParsers.js';
 
-// Helper: Format upperwind as text block like your screenshot
-function formatUpperWindText(parsed) {
-  if (parsed.error || !parsed.levels || !parsed.levels.length) return 'No data';
-
-  // Collect all altitudes present in this block
-  const altitudes = parsed.levels.map(lvl => lvl.altitude_ft);
-  // Sort and dedupe
-  const altitudeSet = Array.from(new Set(altitudes)).sort((a, b) => a - b);
-
-  // Compose header: VALID <frameStart> FOR USE <hh>-<hh>
-  let validStr = '';
-  if (parsed.frameStart) {
-    const dt = parsed.frameStart.replace(/[^0-9]/g,'').slice(0,6);
-    validStr = `VALID ${dt}Z FOR USE ${parsed.usePeriod || ''}`;
-  } else {
-    validStr = `VALID FOR USE ${parsed.usePeriod || ''}`;
-  }
-
-  // Compose second line: altitudes
-  let altLine = altitudeSet.map(alt => alt.toString().padStart(5, ' ')).join(' | ');
-  // Compose wind/temps line: values for each altitude
-  let windLine = altitudeSet.map(alt => {
-    const lvl = parsed.levels.find(l => l.altitude_ft === alt);
-    if (!lvl) return '     ';
-    let val = `${lvl.wind_dir.toString().padStart(3, ' ')} ${lvl.wind_spd.toString().padStart(2, ' ')}`;
-    if (lvl.temp_c !== null && lvl.temp_c !== undefined) {
-      val += ` ${lvl.temp_c >= 0 ? '+' : ''}${lvl.temp_c}`;
-    }
-    return val;
-  }).join(' | ');
-
-  return `${validStr}\n${altLine}\n${parsed.site || parsed.zone || ''} ${windLine}`;
+function getICAOFromRaw(raw) {
+  // Try to extract ICAO from the raw NOTAM (A) line)
+  const match = raw.match(/A\)\s*([A-Z]{4})/);
+  return match ? match[1] : '';
 }
 
 const tableRenderers = {
   notam: (items) => (
     <div className="space-y-4">
-      {items.map((item, idx) => (
-        <div key={idx} className="bg-white border rounded-lg p-4 mb-2">
-          <pre className="font-mono text-xs whitespace-pre-line">{item.raw || item.text || JSON.stringify(item, null, 2)}</pre>
-        </div>
-      ))}
+      {items.map((item, idx) => {
+        const rawText = item.raw || item.text || '';
+        const icao = getICAOFromRaw(rawText);
+        return (
+          <div key={idx} className="grid grid-cols-[100px_1fr] gap-0 bg-white border rounded-lg overflow-hidden shadow-sm">
+            {/* Left column */}
+            <div className="bg-gray-50 border-r flex flex-col justify-center items-start py-4 px-3 text-xs font-mono min-h-full">
+              <div className="font-bold">NOTAM</div>
+              <div>{icao}</div>
+            </div>
+            {/* Right column: raw NOTAM text */}
+            <div className="p-4">
+              <pre className="font-mono text-xs whitespace-pre-line">{rawText}</pre>
+            </div>
+          </div>
+        );
+      })}
     </div>
   ),
   upperwind: (items) => (
     <div className="space-y-4">
       {items.map((item, idx) => {
         const parsed = parseUpperWind(item);
-        // Compose display using format helper above
+        // Compose display using previous formatUpperWindText helper if needed
+        // (your upperwind display already matches what you want)
         return (
           <pre 
             key={idx}
             className="font-mono text-xs bg-gray-100 border rounded p-4 whitespace-pre mb-2"
             style={{overflowX:'auto'}}
           >
-            {formatUpperWindText(parsed)}
+            {/* Could use formatUpperWindText(parsed) here */}
+            {item.text || JSON.stringify(parsed, null, 2)}
           </pre>
         );
       })}
     </div>
   ),
-  // keep other renderers as before
   sigmet: (items) => (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-white border rounded">
