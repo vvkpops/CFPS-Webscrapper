@@ -1,4 +1,4 @@
-// services/api/weatherApi.js (Updated with better error handling and alternative endpoints)
+// services/api/weatherApi.js
 
 import { BASE_API_URL, CORS_PROXY } from '../../utils/constants/apiEndpoints.js';
 
