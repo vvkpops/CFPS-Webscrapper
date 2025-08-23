@@ -12,31 +12,13 @@
     <meta property="og:title" content="CFPS WxRecall Scraper" />
     <meta property="og:description" content="Professional weather data collection tool for Canadian aviation weather systems" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://your-domain.com" />
     <meta property="og:image" content="/og-image.png" />
-    
-    <!-- Twitter Card Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="CFPS WxRecall Scraper" />
-    <meta name="twitter:description" content="Professional weather data collection tool for Canadian aviation weather systems" />
-    <meta name="twitter:image" content="/twitter-image.png" />
     
     <!-- Theme and PWA Meta Tags -->
     <meta name="theme-color" content="#3498db" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="WxRecall Scraper" />
-    
-    <!-- Favicon and App Icons -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="manifest" href="/site.webmanifest" />
-    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#3498db" />
-    
-    <!-- Preload Critical Fonts (if using custom fonts) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     
     <!-- Title -->
     <title>CFPS WxRecall Scraper - Professional Weather Data Collection</title>
@@ -145,21 +127,6 @@
       setTimeout(() => {
         document.body.classList.add('loaded');
       }, 10000);
-    </script>
-    
-    <!-- Service Worker Registration (Optional) -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
     </script>
   </body>
 </html>
