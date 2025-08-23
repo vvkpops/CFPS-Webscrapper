@@ -14,19 +14,16 @@ const tableRenderers = {
       <table className="min-w-full bg-white border rounded">
         <thead>
           <tr className="bg-blue-50">
-            <th className="p-2 text-left">Header</th>
-            <th className="p-2 text-left">FIR</th>
-            <th className="p-2 text-left">Subject</th>
-            <th className="p-2 text-left">Traffic</th>
-            <th className="p-2 text-left">Purpose</th>
-            <th className="p-2 text-left">Scope</th>
-            <th className="p-2 text-left">Lower</th>
-            <th className="p-2 text-left">Upper</th>
-            <th className="p-2 text-left">Coordinates</th>
+            <th className="p-2 text-left">Number</th>
+            <th className="p-2 text-left">Type</th>
+            <th className="p-2 text-left">Classification</th>
+            <th className="p-2 text-left">ICAO</th>
             <th className="p-2 text-left">Location</th>
-            <th className="p-2 text-left">Validity</th>
-            <th className="p-2 text-left">Text (EN)</th>
-            <th className="p-2 text-left">Text (FR)</th>
+            <th className="p-2 text-left">Valid From</th>
+            <th className="p-2 text-left">Valid To</th>
+            <th className="p-2 text-left">Q Line</th>
+            <th className="p-2 text-left">Summary</th>
+            <th className="p-2 text-left">Body</th>
           </tr>
         </thead>
         <tbody>
@@ -34,19 +31,16 @@ const tableRenderers = {
             const parsed = parseNOTAM(item);
             return (
               <tr key={idx} className="border-t align-top">
-                <td className="p-2 font-mono text-xs">{parsed.header}</td>
-                <td className="p-2">{parsed.FIR}</td>
-                <td className="p-2">{parsed.Subject}</td>
-                <td className="p-2">{parsed.Traffic}</td>
-                <td className="p-2">{parsed.Purpose}</td>
-                <td className="p-2">{parsed.Scope}</td>
-                <td className="p-2">{parsed.Lower}</td>
-                <td className="p-2">{parsed.Upper}</td>
-                <td className="p-2">{parsed.Coordinates}</td>
+                <td className="p-2 font-mono text-xs">{parsed.number}</td>
+                <td className="p-2">{parsed.type}</td>
+                <td className="p-2">{parsed.classification}</td>
+                <td className="p-2">{parsed.icao}</td>
                 <td className="p-2">{parsed.location}</td>
-                <td className="p-2 text-xs whitespace-pre-line">{parsed.validity}</td>
-                <td className="p-2 text-xs whitespace-pre-line">{parsed.text}</td>
-                <td className="p-2 text-xs whitespace-pre-line">{parsed.text_fr || ''}</td>
+                <td className="p-2 text-xs">{parsed.validFrom}</td>
+                <td className="p-2 text-xs">{parsed.validTo}</td>
+                <td className="p-2 text-xs">{parsed.qLine}</td>
+                <td className="p-2 text-xs whitespace-pre-line">{parsed.summary}</td>
+                <td className="p-2 text-xs whitespace-pre-line">{parsed.body}</td>
               </tr>
             );
           })}
@@ -141,33 +135,49 @@ const tableRenderers = {
       </table>
     </div>
   ),
-  upperwind: (items) => {
-    const rows = items.flatMap(parseUpperWind);
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border rounded">
-          <thead>
-            <tr className="bg-blue-50">
-              <th className="p-2 text-left">Level</th>
-              <th className="p-2 text-left">Wind Dir</th>
-              <th className="p-2 text-left">Wind Spd</th>
-              <th className="p-2 text-left">Temp</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, idx) => (
-              <tr key={idx} className="border-t">
-                <td className="p-2">{row.level}</td>
-                <td className="p-2">{row.windDir}</td>
-                <td className="p-2">{row.windSpd}</td>
-                <td className="p-2">{row.temp}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+  upperwind: (items) => (
+    <div className="space-y-8">
+      {items.map((item, idx) => {
+        const parsed = parseUpperWind(item);
+        if (parsed.error) {
+          return <pre key={idx} className="bg-red-100 p-2 text-sm">{parsed.error}</pre>;
+        }
+        return (
+          <div key={idx} className="bg-white border rounded-lg p-4">
+            <div className="mb-2 font-mono text-xs text-gray-700">
+              <b>Item {idx+1}</b> | <b>ID:</b> {parsed.id} | <b>Zone:</b> {parsed.zone} | <b>Source:</b> {parsed.source}<br/>
+              <b>Frame Start:</b> {parsed.frameStart} | <b>Frame End:</b> {parsed.frameEnd}
+            </div>
+            <div className="mb-2 text-xs text-gray-600">
+              <b>Issued:</b> {parsed.issueTime} | <b>Valid:</b> {parsed.validStart} - {parsed.validEnd}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-gray-50 border rounded">
+                <thead>
+                  <tr className="bg-blue-50">
+                    <th className="p-2 text-left">Altitude (ft)</th>
+                    <th className="p-2 text-left">Wind Dir (°)</th>
+                    <th className="p-2 text-left">Wind Spd (kt)</th>
+                    <th className="p-2 text-left">Temp (°C)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsed.levels.map((lvl, lidx) => (
+                    <tr key={lidx} className="border-t">
+                      <td className="p-2">{lvl.altitude_ft}</td>
+                      <td className="p-2">{lvl.wind_dir}</td>
+                      <td className="p-2">{lvl.wind_spd}</td>
+                      <td className="p-2">{lvl.temp_c !== null && lvl.temp_c !== undefined ? lvl.temp_c : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  ),
 };
 
 const typeKeyMap = {
