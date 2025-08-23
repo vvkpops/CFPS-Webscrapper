@@ -11,12 +11,25 @@ export const fetchIndividualAlpha = async (site, alpha) => {
     "https://plan.navcanada.ca/weather/api/alpha/?" + params.toString()
   );
 
+  console.log(`🌐 Fetching: ${alpha} for ${site}`);
+  
   const response = await fetch(url);
   if (!response.ok) {
+    // Handle 404s more gracefully - they're often normal for unavailable data
+    if (response.status === 404) {
+      console.warn(`⚠️ No ${alpha} data available for ${site} (404)`);
+      return { 
+        error: `No ${alpha} data available for ${site}`,
+        status: 404,
+        site: site,
+        alpha: alpha
+      };
+    }
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
 
   const data = await response.json();
+  console.log(`✅ Success: ${alpha} for ${site}`);
   return data;
 };
 
@@ -30,12 +43,25 @@ export const fetchIndividualImage = async (site, image) => {
     "https://plan.navcanada.ca/weather/api/alpha/?" + params.toString()
   );
 
+  console.log(`🖼️ Fetching: ${image} for ${site}`);
+  
   const response = await fetch(url);
   if (!response.ok) {
+    // Handle 404s more gracefully - they're often normal for unavailable data
+    if (response.status === 404) {
+      console.warn(`⚠️ No ${image} data available for ${site} (404)`);
+      return { 
+        error: `No ${image} data available for ${site}`,
+        status: 404,
+        site: site,
+        image: image
+      };
+    }
     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
 
   const data = await response.json();
+  console.log(`✅ Success: ${image} for ${site}`);
   return data;
 };
 
