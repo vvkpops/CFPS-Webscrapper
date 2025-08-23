@@ -1,57 +1,104 @@
 // utils/parsers/alphaParsers.js
 
-// Helper for extracting value by regex
-const extract = (text, regex) => {
-  const match = text.match(regex);
-  return match ? match[1]?.trim() : '';
-};
-
+// NOTAM parser: extracts fields from raw NOTAM JSON as provided by the API
 export function parseNOTAM(item) {
-  // Try to extract common NOTAM fields from text
+  const raw = item.raw || '';
+  const english = item.english || null;
+  const french = item.french || null;
+
+  // Split lines for easier parsing
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Header: usually first line (e.g., H4387/25 NOTAMR H4359/25)
+  const headerLine = lines[0] || '';
+  // Q) line
+  const qLine = lines.find(l => l.startsWith('Q)')) || '';
+  // A) line (locations)
+  const aLine = lines.find(l => l.startsWith('A)')) || '';
+  // B) and C) lines (validity)
+  const bLine = lines.find(l => l.startsWith('B)')) || '';
+  const cLine = lines.find(l => l.startsWith('C)')) || '';
+  // E) line (main text, possibly multiline)
+  let eIndex = lines.findIndex(l => l.startsWith('E)'));
+  let eLines = [];
+  if (eIndex >= 0) {
+    eLines = lines.slice(eIndex);
+    // Remove any field tags from E) content
+    let textLines = [];
+    for (let line of eLines) {
+      if (/^[A-Z]\)/.test(line) && !line.startsWith('E)')) break; // next field
+      textLines.push(line.replace(/^E\)\s*/, ''));
+    }
+    eLines = textLines;
+  }
+  const eText = eLines.join('\n').trim();
+
+  // Try to extract French/English text if provided or present in the E) block
+  let mainText = english || eText;
+  let frText = french || null;
+  if (eText.includes('FR:')) {
+    const [en, fr] = eText.split('FR:');
+    mainText = en.trim();
+    frText = fr.trim();
+  }
+
+  // Parse Q) line for details
+  let qFields = {};
+  if (qLine) {
+    // Example: Q) CZQX/QAACH/IV/BO/E/000/999/4848N05604W205
+    // FIR/subject/traffic/purpose/scope/lower/upper/coords
+    const qMatch = qLine.match(
+      /^Q\)\s*([A-Z]{4})\/([A-Z0-9]{5})\/([A-Z]+)\/([A-Z]+)\/([A-Z]+)\/(\d{3})\/(\d{3})\/([0-9N]+[EW]+[0-9]*)/
+    );
+    if (qMatch) {
+      qFields = {
+        FIR: qMatch[1],
+        Subject: qMatch[2],
+        Traffic: qMatch[3],
+        Purpose: qMatch[4],
+        Scope: qMatch[5],
+        Lower: qMatch[6],
+        Upper: qMatch[7],
+        Coordinates: qMatch[8]
+      };
+    }
+  }
+
+  // Compose validity field for table
+  const validity =
+    (bLine ? `Start: ${bLine.replace(/^B\)\s*/, '')}` : '') +
+    (cLine ? `\nEnd: ${cLine.replace(/^C\)\s*/, '')}` : '');
+
   return {
-    number: extract(item.text, /NOTAM\s*(\d+)/i),
-    location: extract(item.text, /Location:\s*(\w+)/i),
-    validity: extract(item.text, /Validity:\s*([^\n]+)/i),
-    subject: extract(item.text, /Subject:\s*([^\n]+)/i),
-    text: item.text,
+    header: headerLine,
+    ...qFields,
+    location: aLine ? aLine.replace(/^A\)\s*/, '') : '',
+    validity,
+    text: mainText,
+    text_fr: frText
   };
 }
 
+// Placeholder SIGMET parser
 export function parseSIGMET(item) {
-  return {
-    id: extract(item.text, /SIGMET\s*(\w+)/i),
-    region: extract(item.text, /Region:\s*([^\n]+)/i),
-    validity: extract(item.text, /Validity:\s*([^\n]+)/i),
-    phenomenon: extract(item.text, /Phenomenon:\s*([^\n]+)/i),
-    text: item.text,
-  };
+  return { id: '', region: '', validity: '', phenomenon: '', text: item.raw || item.text || '' };
 }
 
+// Placeholder AIRMET parser
 export function parseAIRMET(item) {
-  return {
-    id: extract(item.text, /AIRMET\s*(\w+)/i),
-    region: extract(item.text, /Region:\s*([^\n]+)/i),
-    validity: extract(item.text, /Validity:\s*([^\n]+)/i),
-    phenomenon: extract(item.text, /Phenomenon:\s*([^\n]+)/i),
-    text: item.text,
-  };
+  return { id: '', region: '', validity: '', phenomenon: '', text: item.raw || item.text || '' };
 }
 
+// Placeholder PIREP parser
 export function parsePIREP(item) {
-  return {
-    type: extract(item.text, /PIREP\s*(\w+)/i),
-    location: extract(item.text, /Location:\s*([^\n]+)/i),
-    time: extract(item.text, /Time:\s*([^\n]+)/i),
-    details: extract(item.text, /Details:\s*([^\n]+)/i),
-    text: item.text,
-  };
+  return { type: '', location: '', time: '', details: '', text: item.raw || item.text || '' };
 }
 
+// Upper Wind parser (simple table splitter)
 export function parseUpperWind(item) {
-  // If text is a table, try to split by lines and columns
-  const lines = item.text.split('\n').filter(line => line.trim());
+  const lines = (item.raw || item.text || '').split('\n').filter(line => line.trim());
   // Example: FL Level, Wind Dir, Wind Spd, Temp
-  const rows = lines.map(line => {
+  return lines.map(line => {
     const parts = line.split(/\s+/);
     return {
       level: parts[0] || '',
@@ -60,5 +107,4 @@ export function parseUpperWind(item) {
       temp: parts[3] || '',
     };
   });
-  return rows;
 }
