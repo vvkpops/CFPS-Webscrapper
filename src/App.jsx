@@ -1,16 +1,15 @@
-// App.jsx
+// App.jsx - Enhanced Version
 
 import React, { useState } from 'react';
 
-// Components
+// Enhanced Components
 import ConfigurationPanel from './components/configuration/ConfigurationPanel.jsx';
 import DataSelectionPanel from './components/dataSelection/DataSelectionPanel.jsx';
 import ControlPanel from './components/controls/ControlPanel.jsx';
 import ProgressPanel from './components/progress/ProgressPanel.jsx';
 import StatisticsPanel from './components/progress/StatisticsPanel.jsx';
 import ExportPanel from './components/export/ExportPanel.jsx';
-import TabbedResults from './components/results/TabbedResults.jsx';
-// import APIDebugPanel from './components/debug/APIDebugPanel.jsx'; // removed from main UI
+import EnhancedTabbedResults from './components/results/EnhancedTabbedResults.jsx';
 
 // Hooks
 import { useWeatherData } from './hooks/useWeatherData.js';
@@ -35,8 +34,6 @@ const CFPSWxScraper = () => {
   });
 
   const [showGFAMap, setShowGFAMap] = useState(false);
-  // Debug panel removed from main screen
-  // const [showDebugPanel, setShowDebugPanel] = useState(true);
 
   // Custom hooks
   const weatherData = useWeatherData();
@@ -64,6 +61,10 @@ const CFPSWxScraper = () => {
     weatherData.clearData();
     fetchProgress.clearProgress();
     scrapingState.updateStatus('Results cleared', 'info');
+  };
+
+  const handleRefresh = () => {
+    weatherFetching.fetchWeatherData();
   };
 
   const handleExportJSON = () => {
@@ -94,19 +95,34 @@ const CFPSWxScraper = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            🌤️ Complete CFPS WxRecall Scraper
-          </h1>
-          <p className="text-lg text-gray-600">
-            Advanced weather data collection tool for Canadian Flight Planning System
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Enhanced Header */}
+        <div className="text-center mb-8 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-600 opacity-10 rounded-3xl"></div>
+          <div className="relative py-8">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              🌤️ CFPS WxRecall Scraper
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Professional weather data collection and visualization tool for Canadian Flight Planning System
+            </p>
+            <div className="flex items-center justify-center gap-6 mt-4 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Real-time Data</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Advanced Visualization</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span>Export Ready</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* Debug Panel intentionally hidden from main UI */}
 
         {/* Configuration */}
         <ConfigurationPanel 
@@ -129,7 +145,6 @@ const CFPSWxScraper = () => {
           onStartContinuous={handleStartContinuous}
           onStopContinuous={scrapingState.stopContinuous}
           onClear={handleClear}
-          // debug removed from main controls
           onTest={weatherFetching.testIndividualFetches}
         />
 
@@ -155,8 +170,27 @@ const CFPSWxScraper = () => {
           hasData={weatherData.allData.length > 0}
         />
 
-        {/* Results */}
-        <TabbedResults results={weatherData.results} />
+        {/* Enhanced Results */}
+        <EnhancedTabbedResults 
+          results={weatherData.results} 
+          onRefresh={handleRefresh}
+        />
+
+        {/* Footer */}
+        <div className="mt-12 text-center text-gray-500 text-sm">
+          <div className="border-t border-gray-200 pt-6">
+            <p className="mb-2">
+              Powered by NAV Canada CFPS WxRecall API • Built with React & Tailwind CSS
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <span>Real-time weather data</span>
+              <span>•</span>
+              <span>Professional aviation weather</span>
+              <span>•</span>
+              <span>Enhanced visualization</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
