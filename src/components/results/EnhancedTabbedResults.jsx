@@ -1,4 +1,4 @@
-// components/results/EnhancedTabbedResults.jsx
+// components/results/EnhancedTabbedResults.jsx - Updated with Professional View
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -7,7 +7,9 @@ import {
   Image as ImageIcon, 
   Plane,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  Radio,
+  Monitor
 } from 'lucide-react';
 import Card from '../common/Card.jsx';
 import Tabs from '../common/Tabs.jsx';
@@ -15,6 +17,7 @@ import Button from '../common/Button.jsx';
 import EnhancedResultsOverview from './EnhancedResultsOverview.jsx';
 import EnhancedAlphanumericResults from './EnhancedAlphanumericResults.jsx';
 import EnhancedImageResults from './EnhancedImageResults.jsx';
+import ProfessionalWeatherInterface from './ProfessionalWeatherInterface.jsx';
 
 const { Panel: TabPanel } = Tabs;
 
@@ -132,6 +135,7 @@ const SiteSelector = ({ sites, activeSite, onSiteChange, siteData }) => {
 
 const EnhancedTabbedResults = ({ results, onRefresh }) => {
   const [activeSite, setActiveSite] = useState('');
+  const [viewMode, setViewMode] = useState('enhanced'); // 'enhanced' or 'professional'
 
   useEffect(() => {
     if (results && Object.keys(results).length > 0 && !activeSite) {
@@ -175,6 +179,17 @@ const EnhancedTabbedResults = ({ results, onRefresh }) => {
   const sites = Object.keys(results);
   const currentSiteData = results[activeSite] || {};
 
+  // Professional View - Direct Raw Data Interface
+  if (viewMode === 'professional') {
+    return (
+      <ProfessionalWeatherInterface 
+        results={results}
+        onBack={() => setViewMode('enhanced')}
+        onRefresh={onRefresh}
+      />
+    );
+  }
+
   // Calculate overall statistics for the current site
   const getTabCounts = () => {
     const alphaCount = currentSiteData.alpha_data ? Object.keys(currentSiteData.alpha_data).length : 0;
@@ -212,16 +227,27 @@ const EnhancedTabbedResults = ({ results, onRefresh }) => {
             </div>
             Weather Data Results
           </h2>
-          {onRefresh && (
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
             <Button
-              onClick={onRefresh}
-              variant="secondary"
+              onClick={() => setViewMode('professional')}
+              variant="orange"
               size="sm"
-              icon={RefreshCw}
+              icon={Radio}
             >
-              Refresh Data
+              Professional View
             </Button>
-          )}
+            {onRefresh && (
+              <Button
+                onClick={onRefresh}
+                variant="secondary"
+                size="sm"
+                icon={RefreshCw}
+              >
+                Refresh Data
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="flex items-center justify-between">
