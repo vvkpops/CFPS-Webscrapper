@@ -252,3 +252,67 @@ const ProfessionalWeatherInterface = ({ results, onBack, onRefresh }) => {
                     {isError && (
                       <span className="bg-red-100 text-red-800 px-2 py-1 rounded font-mono text-xs font-bold">
                         ERROR
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(displayText, dataType)}
+                    className="flex items-center gap-2 px-3 py-1 border-2 border-gray-400 rounded font-mono text-sm font-bold hover:bg-white transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {copiedField === dataType ? 'COPIED!' : 'COPY'}
+                  </button>
+                </div>
+                
+                {/* Data Content */}
+                <div className="p-4">
+                  {isError ? (
+                    <div className="font-mono text-sm text-red-600 bg-red-50 p-4 rounded border border-red-200">
+                      {displayText}
+                    </div>
+                  ) : (
+                    <div className="font-mono text-sm leading-relaxed bg-black text-green-400 p-4 rounded border-2 border-gray-600 whitespace-pre-line">
+                      {displayText}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* No Data Message */}
+          {availableData.length === 0 && (
+            <div className="text-center py-12">
+              <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="font-mono text-xl font-bold text-gray-700 mb-2">NO WEATHER DATA AVAILABLE</h3>
+              <p className="font-mono text-gray-500">
+                NO ALPHANUMERIC DATA FOUND FOR STATION {selectedStation}
+              </p>
+              <div className="mt-4 font-mono text-sm text-gray-400">
+                CHECK STATION CODE OR REFRESH DATA
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer - System Info */}
+        <div className="mt-8 pt-6 border-t-2 border-gray-300">
+          <div className="flex items-center justify-between font-mono text-xs text-gray-500">
+            <div>
+              CFPS WXRECALL DATA TERMINAL • STATION: {selectedStation} • 
+              REGION: {stationData.gfa_region} ({regionNames[stationData.gfa_region] || 'UNKNOWN'})
+            </div>
+            <div>
+              DATA FETCH: {stationData.fetch_summary?.end_time ? 
+                new Date(stationData.fetch_summary.end_time).toISOString().replace('T', ' ').slice(0, 16) + 'Z' : 
+                'UNKNOWN TIME'
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProfessionalWeatherInterface;
