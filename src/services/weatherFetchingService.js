@@ -1,11 +1,11 @@
-// services/weatherFetchingService.js
+// services/weatherFetchingService.js - Simplified Version
 
 import { fetchIndividualAlpha, fetchIndividualImage } from './api/weatherApi.js';
 import { fetchIndividualGFA } from './api/gfaApi.js';
 import { gfaRegionMapping } from '../utils/constants/gfaRegions.js';
 
 export const useWeatherFetching = (config, selectedData, weatherData, scrapingState, fetchProgress) => {
-  const fetchSiteDataIndividually = async (site) => {
+  const fetchSiteDataBulk = async (site) => {
     const alphas = selectedData.alpha || [];
     const images = selectedData.image || [];
     const delay = config.requestDelay;
@@ -20,54 +20,43 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
         total_requests: 0,
         successful_requests: 0,
         failed_requests: 0,
-        start_time: new Date().toISOString()
+        start_time: new Date().toISOString(),
+        data_points: 0
       }
     };
 
-    const progressItems = [
-      ...alphas.map(a => ({ name: a.toUpperCase(), status: 'pending' })),
-      ...images.map(i => ({ name: i, status: 'pending' }))
-    ];
-    fetchProgress.updateProgress(site, progressItems);
+    // Simplified bulk fetching - no individual progress tracking
+    scrapingState.updateStatus(`Fetching all data for ${site}...`, 'info');
 
-    let currentIndex = 0;
-    let localStats = { responseTimes: [] };
-
-    // Fetch alpha data
-    for (const alpha of alphas) {
+    // Fetch all alpha data
+    const alphaPromises = alphas.map(async (alpha) => {
       try {
-        fetchProgress.updateItemStatus(site, currentIndex, 'pending');
-        
         const startTime = Date.now();
         const alphaData = await fetchIndividualAlpha(site, alpha);
         const responseTime = Date.now() - startTime;
         
         allSiteData.alpha_data[alpha] = alphaData;
         allSiteData.fetch_summary.successful_requests++;
-        localStats.responseTimes.push(responseTime);
         
-        fetchProgress.updateItemStatus(site, currentIndex, 'success', responseTime);
+        // Add small delay between requests
+        if (delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         
+        return { success: true, responseTime };
       } catch (error) {
         console.warn(`Failed to fetch ${alpha} for ${site}:`, error);
         allSiteData.alpha_data[alpha] = { error: error.message };
         allSiteData.fetch_summary.failed_requests++;
-        fetchProgress.updateItemStatus(site, currentIndex, 'failed', null, error.message);
+        return { success: false, error: error.message };
+      } finally {
+        allSiteData.fetch_summary.total_requests++;
       }
-      
-      allSiteData.fetch_summary.total_requests++;
-      currentIndex++;
-      
-      if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
+    });
 
-    // Fetch image data
-    for (const image of images) {
+    // Fetch all image data
+    const imagePromises = images.map(async (image) => {
       try {
-        fetchProgress.updateItemStatus(site, currentIndex, 'pending');
-        
         const startTime = Date.now();
         
         let imageData;
@@ -81,25 +70,26 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
         
         allSiteData.image_data[image] = imageData;
         allSiteData.fetch_summary.successful_requests++;
-        localStats.responseTimes.push(responseTime);
         
-        fetchProgress.updateItemStatus(site, currentIndex, 'success', responseTime);
+        // Add small delay between requests
+        if (delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         
+        return { success: true, responseTime };
       } catch (error) {
         console.warn(`Failed to fetch ${image} for ${site}:`, error);
         allSiteData.image_data[image] = { error: error.message };
         allSiteData.fetch_summary.failed_requests++;
-        fetchProgress.updateItemStatus(site, currentIndex, 'failed', null, error.message);
+        return { success: false, error: error.message };
+      } finally {
+        allSiteData.fetch_summary.total_requests++;
       }
-      
-      allSiteData.fetch_summary.total_requests++;
-      currentIndex++;
-      
-      if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
+    });
 
+    // Wait for all requests to complete
+    const allResults = await Promise.all([...alphaPromises, ...imagePromises]);
+    
     allSiteData.fetch_summary.end_time = new Date().toISOString();
     
     // Count data points
@@ -114,6 +104,8 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
     Object.values(allSiteData.image_data).forEach(data => {
       if (data.data && Array.isArray(data.data)) {
         dataPoints += data.data.length;
+      } else if (data.images && Array.isArray(data.images)) {
+        dataPoints += data.images.length;
       } else if (!data.error) {
         dataPoints += 1;
       }
@@ -122,16 +114,22 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
     allSiteData.fetch_summary.data_points = dataPoints;
     
     // Update stats
+    const successCount = allResults.filter(r => r.success).length;
+    const responseTimes = allResults.filter(r => r.responseTime).map(r => r.responseTime);
+    
     weatherData.updateStats({
-      successful: 1,
+      total: 1,
+      successful: successCount > 0 ? 1 : 0,
+      failed: successCount === 0 ? 1 : 0,
       dataPoints: dataPoints,
-      responseTimes: localStats.responseTimes
+      responseTimes: responseTimes
     });
 
     return allSiteData;
   };
 
   const fetchWeatherData = async (sites = null) => {
+    // Reset progress and start fetching
     scrapingState.updateProgress(0);
     fetchProgress.clearProgress();
     
@@ -142,30 +140,43 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
 
     const uniqueSites = [...new Set(sitesToFetch.map(s => s.toUpperCase()))];
 
-    scrapingState.updateStatus(`Preparing to fetch data for ${uniqueSites.length} site(s)...`, 'info');
+    scrapingState.updateStatus(`Fetching weather data for ${uniqueSites.length} site(s)...`, 'info');
+    scrapingState.updateProgress(10);
 
     let allResults = {};
     let completed = 0;
 
+    // Process sites sequentially for now (can be made parallel if needed)
     for (const site of uniqueSites) {
       try {
-        scrapingState.updateStatus(`Fetching data for ${site}...`, 'info');
+        scrapingState.updateStatus(`Processing ${site}...`, 'info');
+        scrapingState.updateProgress(10 + (completed / uniqueSites.length) * 80);
         
-        const result = await fetchSiteDataIndividually(site);
+        const result = await fetchSiteDataBulk(site);
         allResults[site] = result;
         
         completed++;
-        scrapingState.updateProgress((completed / uniqueSites.length) * 100);
+        scrapingState.updateProgress(10 + (completed / uniqueSites.length) * 80);
         
       } catch (error) {
         console.error(`Error fetching data for ${site}:`, error);
-        allResults[site] = { error: error.message };
-        weatherData.updateStats({ failed: 1 });
+        allResults[site] = { 
+          site: site,
+          error: error.message,
+          fetch_summary: {
+            total_requests: 0,
+            successful_requests: 0,
+            failed_requests: 1
+          }
+        };
+        weatherData.updateStats({ total: 1, failed: 1 });
         completed++;
-        scrapingState.updateProgress((completed / uniqueSites.length) * 100);
+        scrapingState.updateProgress(10 + (completed / uniqueSites.length) * 80);
       }
-      weatherData.updateStats({ total: 1 });
     }
+
+    // Finalize
+    scrapingState.updateProgress(100);
 
     // Store results
     const sessionData = {
@@ -175,12 +186,12 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
     };
     
     weatherData.addSessionData(sessionData);
-    scrapingState.updateStatus(`Completed fetching data for ${uniqueSites.length} sites`, 'success');
+    scrapingState.updateStatus(`Successfully fetched data for ${uniqueSites.length} sites`, 'success');
     
-    // Clear fetch progress after a delay
+    // Reset progress after a short delay
     setTimeout(() => {
-      fetchProgress.clearProgress();
-    }, 3000);
+      scrapingState.updateProgress(0);
+    }, 2000);
   };
 
   const debugGFAAPI = async () => {
@@ -192,7 +203,7 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
       return;
     }
     
-    scrapingState.updateStatus(`🔍 Testing different GFA API parameters for ${site} → ${gfaRegion}...`, 'info');
+    scrapingState.updateStatus(`🔍 Testing GFA API for ${site} → ${gfaRegion}...`, 'info');
     
     // Simulate debug testing
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -201,7 +212,7 @@ export const useWeatherFetching = (config, selectedData, weatherData, scrapingSt
 
   const testIndividualFetches = async () => {
     const site = config.primarySite || "CYYT";
-    scrapingState.updateStatus('🔬 Testing individual API call patterns...', 'info');
+    scrapingState.updateStatus('🔬 Testing individual API calls...', 'info');
     
     // Simulate individual testing
     await new Promise(resolve => setTimeout(resolve, 2000));
