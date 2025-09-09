@@ -1,15 +1,10 @@
-// App.jsx - Enhanced Version
+// App.jsx - Simplified Version
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Enhanced Components
-import ConfigurationPanel from './components/configuration/ConfigurationPanel.jsx';
-import DataSelectionPanel from './components/dataSelection/DataSelectionPanel.jsx';
-import ControlPanel from './components/controls/ControlPanel.jsx';
-import ProgressPanel from './components/progress/ProgressPanel.jsx';
-import StatisticsPanel from './components/progress/StatisticsPanel.jsx';
-import ExportPanel from './components/export/ExportPanel.jsx';
-import EnhancedTabbedResults from './components/results/EnhancedTabbedResults.jsx';
+// Components
+import SimplifiedConfigurationPanel from './components/configuration/SimplifiedConfigurationPanel.jsx';
+import ProfessionalWeatherTerminal from './components/results/ProfessionalWeatherTerminal.jsx';
 
 // Hooks
 import { useWeatherData } from './hooks/useWeatherData.js';
@@ -18,28 +13,27 @@ import { useFetchProgress } from './hooks/useFetchProgress.js';
 
 // Services
 import { useWeatherFetching } from './services/weatherFetchingService.js';
-import { useExportData } from './services/export/exportService.js';
 
 const CFPSWxScraper = () => {
   const [config, setConfig] = useState({
     primarySite: 'CYYT',
-    additionalSites: [],
+    additionalSites: ['CYUL', 'CYVR'],
     interval: 300,
     requestDelay: 500
   });
 
+  // Auto-select all data types by default
   const [selectedData, setSelectedData] = useState({
-    alpha: ['metar', 'taf'],
-    image: ['GFA/CLDWX', 'GFA/TURBC']
+    alpha: ['metar', 'taf', 'notam', 'sigmet', 'airmet', 'pirep', 'upperwind', 'space_weather', 'vfr_route', 'area_forecast'],
+    image: ['SATELLITE/IR', 'SATELLITE/VIS', 'SATELLITE/WV', 'RADAR/COMPOSITE', 'RADAR/CAPPI_RAIN', 'GFA/CLDWX', 'GFA/TURBC', 'GFA/WINDS', 'SIG_WX/HIGH_LEVEL']
   });
 
-  const [showGFAMap, setShowGFAMap] = useState(false);
+  const [isSelectionExpanded, setIsSelectionExpanded] = useState(false);
 
   // Custom hooks
   const weatherData = useWeatherData();
   const scrapingState = useScrapingState();
   const fetchProgress = useFetchProgress();
-  const exportData = useExportData();
 
   // Weather fetching service
   const weatherFetching = useWeatherFetching(
@@ -50,147 +44,52 @@ const CFPSWxScraper = () => {
     fetchProgress
   );
 
-  const handleStartContinuous = () => {
-    scrapingState.startContinuous(
-      () => weatherFetching.fetchWeatherData(),
-      config.interval
-    );
-  };
+  // Auto-fetch on component mount
+  useEffect(() => {
+    if (config.primarySite) {
+      weatherFetching.fetchWeatherData();
+    }
+  }, []); // Only run once on mount
 
-  const handleClear = () => {
-    weatherData.clearData();
-    fetchProgress.clearProgress();
-    scrapingState.updateStatus('Results cleared', 'info');
+  const handleFetch = () => {
+    weatherFetching.fetchWeatherData();
   };
 
   const handleRefresh = () => {
     weatherFetching.fetchWeatherData();
   };
 
-  const handleExportJSON = () => {
-    if (weatherData.allData.length === 0) {
-      scrapingState.updateStatus('No data to export', 'warning');
-      return;
-    }
-    exportData.exportJSON(weatherData.allData);
-    scrapingState.updateStatus('Data exported as JSON', 'success');
-  };
-
-  const handleExportCSV = () => {
-    if (weatherData.allData.length === 0) {
-      scrapingState.updateStatus('No data to export', 'warning');
-      return;
-    }
-    exportData.exportCSV(weatherData.allData);
-    scrapingState.updateStatus('Data exported as CSV', 'success');
-  };
-
-  const handleExportHTML = () => {
-    if (weatherData.allData.length === 0) {
-      scrapingState.updateStatus('No data to export', 'warning');
-      return;
-    }
-    exportData.exportHTML(weatherData.allData, weatherData.stats, weatherData.results, config);
-    scrapingState.updateStatus('Data exported as HTML', 'success');
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Enhanced Header */}
-        <div className="text-center mb-8 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-600 opacity-10 rounded-3xl"></div>
-          <div className="relative py-8">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              🌤️ CFPS WxRecall Scraper
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Professional weather data collection and visualization tool for Canadian Flight Planning System
-            </p>
-            <div className="flex items-center justify-center gap-6 mt-4 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Real-time Data</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Advanced Visualization</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span>Export Ready</span>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Simplified Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            🌤️ CFPS WxRecall Terminal
+          </h1>
+          <p className="text-gray-600">Professional Weather Data Interface</p>
         </div>
 
-        {/* Configuration */}
-        <ConfigurationPanel 
+        {/* Collapsible Configuration */}
+        <SimplifiedConfigurationPanel 
           config={config}
-          onConfigChange={setConfig}
-          onGFAMapToggle={() => setShowGFAMap(!showGFAMap)}
-          showGFAMap={showGFAMap}
-        />
-
-        {/* Data Selection */}
-        <DataSelectionPanel 
+          setConfig={setConfig}
           selectedData={selectedData}
-          onDataChange={setSelectedData}
+          setSelectedData={setSelectedData}
+          isExpanded={isSelectionExpanded}
+          setExpanded={setIsSelectionExpanded}
+          onFetch={handleFetch}
+          isLoading={scrapingState.progress > 0 && scrapingState.progress < 100}
+          lastUpdate={weatherData.allData.length > 0 ? new Date(weatherData.allData[weatherData.allData.length - 1]?.timestamp) : null}
         />
 
-        {/* Controls */}
-        <ControlPanel 
-          isScrapingActive={scrapingState.isScrapingActive}
-          onFetch={() => weatherFetching.fetchWeatherData()}
-          onStartContinuous={handleStartContinuous}
-          onStopContinuous={scrapingState.stopContinuous}
-          onClear={handleClear}
-          onTest={weatherFetching.testIndividualFetches}
-        />
-
-        {/* Progress */}
-        <ProgressPanel 
-          progress={scrapingState.progress}
-          status={scrapingState.status}
-          isVisible={scrapingState.progress > 0 || Object.keys(fetchProgress.fetchProgress).length > 0}
-          fetchProgress={fetchProgress.fetchProgress}
-        />
-
-        {/* Statistics */}
-        <StatisticsPanel 
-          stats={weatherData.stats}
-          isVisible={weatherData.stats.total > 0}
-        />
-
-        {/* Export */}
-        <ExportPanel 
-          onExportJSON={handleExportJSON}
-          onExportCSV={handleExportCSV}
-          onExportHTML={handleExportHTML}
-          hasData={weatherData.allData.length > 0}
-        />
-
-        {/* Enhanced Results */}
-        <EnhancedTabbedResults 
-          results={weatherData.results} 
+        {/* Professional Weather Interface */}
+        <ProfessionalWeatherTerminal 
+          weatherData={weatherData.results}
+          isLoading={scrapingState.progress > 0 && scrapingState.progress < 100}
           onRefresh={handleRefresh}
+          status={scrapingState.status}
         />
-
-        {/* Footer */}
-        <div className="mt-12 text-center text-gray-500 text-sm">
-          <div className="border-t border-gray-200 pt-6">
-            <p className="mb-2">
-              Powered by NAV Canada CFPS WxRecall API • Built with React & Tailwind CSS
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <span>Real-time weather data</span>
-              <span>•</span>
-              <span>Professional aviation weather</span>
-              <span>•</span>
-              <span>Enhanced visualization</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
