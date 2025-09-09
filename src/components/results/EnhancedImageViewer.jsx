@@ -6,12 +6,10 @@ import {
   ZoomOut, 
   RotateCw, 
   Download, 
-  Maximize, 
   X, 
   ChevronLeft, 
   ChevronRight,
   Clock,
-  MapPin,
   Info
 } from 'lucide-react';
 import Button from '../common/Button.jsx';
