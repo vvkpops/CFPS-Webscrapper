@@ -9,23 +9,25 @@ const RadarDisplay = ({ imageData }) => {
     if (!imageData) return data;
     Object.entries(imageData).forEach(([key, value]) => {
       // Key is 'RADAR/COMPOSITE', etc.
-      if (key.startsWith('RADAR/') && value) {
+      if (key.startsWith('RADAR/') && value && !value.error) {
         const type = key.split('/')[1]; // e.g., 'COMPOSITE'
+        
+        // The API returns the actual image info inside a JSON string in the 'text' property of the first data item.
         if (value.data && Array.isArray(value.data) && value.data.length > 0 && value.data[0].text) {
           try {
-            // The actual image info is inside a JSON string in the 'text' property
-            const parsed = JSON.parse(value.data[0].text);
-            const imageInfo = parsed?.frame_lists?.[0]?.frames?.[0]?.images?.[0];
+            const parsedText = JSON.parse(value.data[0].text);
+            
+            // The image ID is deeply nested. This finds the first available image.
+            const imageInfo = parsedText?.frame_lists?.[0]?.frames?.[0]?.images?.[0];
             
             if (imageInfo?.id) {
               data[type] = {
-                ...parsed,
                 imageUrl: `https://plan.navcanada.ca/weather/images/${imageInfo.id}.image`,
                 timestamp: imageInfo.created,
               };
             }
           } catch (e) {
-            console.error('Failed to parse radar data JSON:', e);
+            console.error(`Failed to parse radar data JSON for ${type}:`, e);
           }
         }
       }
@@ -38,7 +40,7 @@ const RadarDisplay = ({ imageData }) => {
 
   if (availableTypes.length === 0) return null;
 
-  // Set a default active type if the current one isn't available
+  // Default to the first available type if the current selection is not found
   if (availableTypes.length > 0 && !radarData[activeType]) {
     setActiveType(availableTypes[0]);
   }
@@ -58,8 +60,7 @@ const RadarDisplay = ({ imageData }) => {
                   : 'bg-gray-200 text-gray-700'
               }`}
             >
-              {/* Simple name mapping */}
-              {type === 'COMPOSITE' ? 'EchoTop' : type.replace('CAPPI_', '').replace('_', ' ')}
+              {type === 'COMPOSITE' ? 'EchoTop' : type.replace(/_/g, ' ')}
             </button>
           ))}
         </div>
@@ -70,10 +71,10 @@ const RadarDisplay = ({ imageData }) => {
           <img
             src={activeRadar.imageUrl}
             alt={`Radar ${activeType}`}
-            className="w-full h-auto rounded border"
+            className="w-full h-auto rounded border bg-gray-100"
           />
           <div className="text-center text-sm text-gray-600 mt-2">
-            {new Date(activeRadar.timestamp).toLocaleTimeString()}
+            {new Date(activeRadar.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}Z
           </div>
         </div>
       ) : (

@@ -40,7 +40,7 @@ const WeatherStrip = () => {
   const handleSearch = (site) => {
     const newConfig = { ...config, primarySite: site };
     setConfig(newConfig);
-    weatherData.clearData();
+    weatherData.clearData(); // Clear old data before fetching new
     weatherFetching.fetchWeatherData([site]);
   };
 
@@ -50,13 +50,16 @@ const WeatherStrip = () => {
   }, []); // an empty dependency array to run only once on mount
 
   const currentSiteData = weatherData.results[config.primarySite];
-  const isLoading = scrapingState.progress < 100 && scrapingState.progress > 0;
+  const isLoading = scrapingState.progress > 0 && scrapingState.progress < 100;
+  
+  // A simple placeholder for the airport name. This can be expanded later.
+  const airportName = currentSiteData?.airport_name || "Gander International Airport";
 
   return (
-    <div className="bg-gray-100 min-h-screen">
-      <Header onSearch={handleSearch} initialSite={config.primarySite} />
+    <div className="bg-gray-50 min-h-screen">
+      <Header onSearch={handleSearch} initialSite={config.primarySite} siteName={airportName} />
       
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {isLoading && (
           <div className="flex justify-center items-center py-20">
             <Loader className="w-12 h-12 animate-spin text-blue-600" />
@@ -65,23 +68,18 @@ const WeatherStrip = () => {
         )}
 
         {!isLoading && !currentSiteData && (
-           <div className="text-center py-20">
+           <div className="text-center py-20 bg-white rounded-lg shadow-soft">
              <h2 className="text-2xl font-bold text-gray-800">No Data Available</h2>
-             <p className="text-gray-600 mt-2">Could not fetch data for {config.primarySite}. Please try another airport.</p>
+             <p className="text-gray-600 mt-2">Could not fetch data for {config.primarySite}. Check the ICAO code or try again.</p>
            </div>
         )}
 
         {currentSiteData && (
-          <div className="bg-white p-6 rounded-lg shadow-soft divide-y divide-gray-200">
-            <div className="flex justify-between items-center pb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{config.primarySite}</h1>
-                <p className="text-gray-500">{/* Full airport name could go here */}</p>
-              </div>
-              <div className="text-right text-xs text-gray-500">
-                <p>Data time: {new Date().toISOString().replace('T', ' ').substring(0, 19)}Z</p>
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-soft divide-y divide-gray-200">
+            {/* Header info is now in the main Header component */}
+            <div className="pb-4 text-right text-xs text-gray-500">
+                <p>Data time: {new Date(currentSiteData.fetch_summary?.start_time || Date.now()).toISOString().replace('T', ' ').substring(0, 19)}Z</p>
                 <p>Current time: {new Date().toISOString().replace('T', ' ').substring(0, 19)}Z</p>
-              </div>
             </div>
 
             <GfaDisplay imageData={currentSiteData.image_data} />
