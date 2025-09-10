@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { parseRawAlpha } from '../../utils/parsers/alphaParsers.js';
 import { regionNames } from '../../utils/constants/gfaRegions.js';
-import WeatherImageryViewer from './WeatherImageryViewer.jsx';
+import SimpleImageViewer from './SimpleImageViewer.jsx';
 
 const ProfessionalWeatherTerminal = ({ weatherData, isLoading, onRefresh, status }) => {
   const [selectedStation, setSelectedStation] = useState('');
@@ -48,12 +48,22 @@ const ProfessionalWeatherTerminal = ({ weatherData, isLoading, onRefresh, status
       <div className="bg-white rounded-xl shadow-soft border border-gray-200 p-12 text-center">
         <ServerCrash className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-gray-800 mb-2">No Station Data Loaded</h3>
-        <p className="text-gray-500">Configure sites and fetch data to begin, or check the console for errors.</p>
+        <p className="text-gray-500">Configure sites and fetch data to begin.</p>
       </div>
     );
   }
 
   const dataTypes = ['metar', 'taf', 'notam', 'sigmet', 'airmet', 'pirep'];
+  
+  // Count available images
+  const imageCount = stationData.image_data ? 
+    Object.values(stationData.image_data).reduce((count, data) => {
+      if (data && !data.error) {
+        if (data.images && Array.isArray(data.images)) return count + data.images.length;
+        if (data.url || data.proxy_url) return count + 1;
+      }
+      return count;
+    }, 0) : 0;
 
   return (
     <div className="bg-white rounded-xl shadow-soft border border-gray-200 overflow-hidden">
@@ -133,6 +143,11 @@ const ProfessionalWeatherTerminal = ({ weatherData, isLoading, onRefresh, status
           >
             <FileText className="w-5 h-5" />
             TEXT REPORTS
+            {stationData.alpha_data && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
+                {Object.keys(stationData.alpha_data).length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('images')}
@@ -144,6 +159,11 @@ const ProfessionalWeatherTerminal = ({ weatherData, isLoading, onRefresh, status
           >
             <ImageIcon className="w-5 h-5" />
             WEATHER IMAGERY
+            {imageCount > 0 && (
+              <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
+                {imageCount}
+              </span>
+            )}
           </button>
         </nav>
       </div>
@@ -151,7 +171,7 @@ const ProfessionalWeatherTerminal = ({ weatherData, isLoading, onRefresh, status
       {/* Tab Content */}
       <div className="p-6 bg-gray-50/50">
         {activeTab === 'text' && <TextReportsTab alphaData={stationData.alpha_data} />}
-        {activeTab === 'images' && <WeatherImageryViewer imageData={stationData.image_data} getDataStatus={getDataStatus} />}
+        {activeTab === 'images' && <SimpleImageViewer imageData={stationData.image_data} />}
       </div>
     </div>
   );
