@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   Settings, ChevronLeft, ChevronRight, Map, 
-  FileText, Image, Cloud, Zap 
+  FileText, Image, Cloud, Zap, RefreshCw, Play
 } from 'lucide-react';
 
 const Sidebar = ({
@@ -12,9 +12,18 @@ const Sidebar = ({
   selectedData,
   setSelectedData,
   collapsed,
-  setCollapsed
+  setCollapsed,
+  onFetch,
+  isLoading
 }) => {
   const [activeTab, setActiveTab] = useState('config');
+
+  // Handle Enter key press on input fields
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !isLoading) {
+      onFetch();
+    }
+  };
 
   return (
     <aside className={`bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
@@ -41,6 +50,32 @@ const Sidebar = ({
               )}
             </button>
           </div>
+        </div>
+
+        {/* Quick Fetch Button - Always Visible */}
+        <div className={`p-4 border-b border-gray-200 dark:border-gray-700 ${collapsed ? 'px-2' : ''}`}>
+          <button
+            onClick={onFetch}
+            disabled={isLoading}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+              collapsed ? 'px-2' : ''
+            }`}
+            title="Fetch Weather Data (Press Enter)"
+          >
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Play className="w-5 h-5" />
+                {!collapsed && <span>Fetch Data</span>}
+              </>
+            )}
+          </button>
+          {!collapsed && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              Press Enter to fetch
+            </p>
+          )}
         </div>
 
         {/* Sidebar Content */}
@@ -83,6 +118,7 @@ const Sidebar = ({
                     type="text"
                     value={config.primarySite}
                     onChange={(e) => setConfig({...config, primarySite: e.target.value.toUpperCase()})}
+                    onKeyPress={handleKeyPress}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g., CYYT"
                   />
@@ -98,6 +134,12 @@ const Sidebar = ({
                       ...config,
                       additionalSites: e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s)
                     })}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+                        e.preventDefault();
+                        onFetch();
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     placeholder="CYUL, CYVR, CYYZ"
                     rows="2"
@@ -112,6 +154,7 @@ const Sidebar = ({
                     type="number"
                     value={config.interval}
                     onChange={(e) => setConfig({...config, interval: parseInt(e.target.value)})}
+                    onKeyPress={handleKeyPress}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     min="60"
                     max="3600"
@@ -126,6 +169,7 @@ const Sidebar = ({
                     type="number"
                     value={config.requestDelay}
                     onChange={(e) => setConfig({...config, requestDelay: parseInt(e.target.value)})}
+                    onKeyPress={handleKeyPress}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     min="100"
                     max="5000"
