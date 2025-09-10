@@ -46,6 +46,26 @@ const App = () => {
     }
   }, [darkMode]);
 
+  // Add global keyboard shortcut for fetching
+  useEffect(() => {
+    const handleGlobalKeyPress = (e) => {
+      // Ctrl+Enter or Cmd+Enter to fetch from anywhere
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !scrapingState.isScrapingActive) {
+        handleFetch();
+      }
+      // F5 to refresh (prevent default browser refresh)
+      if (e.key === 'F5') {
+        e.preventDefault();
+        if (!scrapingState.isScrapingActive) {
+          handleFetch();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyPress);
+    return () => window.removeEventListener('keydown', handleGlobalKeyPress);
+  }, [scrapingState.isScrapingActive]);
+
   const handleFetch = async () => {
     await weatherFetching.fetchWeatherData();
     setLastUpdate(new Date());
@@ -89,7 +109,7 @@ const App = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      {/* Sidebar */}
+      {/* Sidebar with fetch button and enter key support */}
       <Sidebar
         config={config}
         setConfig={setConfig}
@@ -97,6 +117,8 @@ const App = () => {
         setSelectedData={setSelectedData}
         collapsed={sidebarCollapsed}
         setCollapsed={setSidebarCollapsed}
+        onFetch={handleFetch}
+        isLoading={scrapingState.isScrapingActive}
       />
 
       {/* Main Content */}
@@ -113,17 +135,23 @@ const App = () => {
               </span>
             )}
           </div>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Toggle dark mode"
-          >
-            {darkMode ? (
-              <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            ) : (
-              <Moon className="w-5 h-5 text-gray-600" />
-            )}
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-gray-500">
+              <kbd className="px-2 py-1 bg-gray-100 rounded">Ctrl</kbd> + 
+              <kbd className="px-2 py-1 bg-gray-100 rounded ml-1">Enter</kbd> to fetch
+            </div>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? (
+                <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          </div>
         </header>
 
         {/* Main Content Area */}
