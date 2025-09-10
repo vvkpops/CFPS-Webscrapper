@@ -10,11 +10,24 @@ const GfaDisplay = ({ imageData }) => {
     if (!imageData) return data;
 
     Object.entries(imageData).forEach(([key, value]) => {
-      if (key.startsWith('GFA/')) {
-        const type = key.split('/')[1];
-        if (!data[type]) data[type] = [];
+      // The key will be like 'GFA/CLDWX' or 'GFA/TURBC'
+      if (key.startsWith('GFA/') && value) {
+        const type = key.split('/')[1]; // e.g., 'CLDWX'
+        // The API might return images directly under the value, or nested inside a 'data' object that is an array
+        let images = [];
         if (value.images && Array.isArray(value.images)) {
-          data[type] = value.images;
+          // Shape: { images: [...] }
+          images = value.images;
+        } else if (value.data && Array.isArray(value.data)) {
+          // Shape: { data: [{... images: [...] }] }
+          const gfaObject = value.data.find(d => d.images && Array.isArray(d.images));
+          if (gfaObject) {
+            images = gfaObject.images;
+          }
+        }
+        
+        if (images.length > 0) {
+          data[type] = images;
         }
       }
     });
@@ -25,8 +38,19 @@ const GfaDisplay = ({ imageData }) => {
   const imagesForType = gfaData[activeImageType] || [];
   const activeImage = imagesForType.find(img => img.period === activePeriod);
 
+  // If no GFA data at all, don't render the component
   if (availableTypes.length === 0) {
     return null;
+  }
+  
+  // Set a default active type if the current one isn't available
+  if (availableTypes.length > 0 && !gfaData[activeImageType]) {
+    setActiveImageType(availableTypes[0]);
+  }
+  
+  // Set a default active period if the current one isn't available for the selected type
+  if (imagesForType.length > 0 && !activeImage) {
+      setActivePeriod(imagesForType[0].period);
   }
 
   return (

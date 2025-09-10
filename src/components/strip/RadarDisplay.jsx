@@ -8,19 +8,24 @@ const RadarDisplay = ({ imageData }) => {
     const data = {};
     if (!imageData) return data;
     Object.entries(imageData).forEach(([key, value]) => {
-      if (key.startsWith('RADAR/')) {
-        const type = key.split('/')[1];
-        if (value && value.data && value.data.length > 0) {
+      // Key is 'RADAR/COMPOSITE', etc.
+      if (key.startsWith('RADAR/') && value) {
+        const type = key.split('/')[1]; // e.g., 'COMPOSITE'
+        if (value.data && Array.isArray(value.data) && value.data.length > 0 && value.data[0].text) {
           try {
+            // The actual image info is inside a JSON string in the 'text' property
             const parsed = JSON.parse(value.data[0].text);
-            if (parsed.frame_lists && parsed.frame_lists[0].frames[0].images[0]) {
+            const imageInfo = parsed?.frame_lists?.[0]?.frames?.[0]?.images?.[0];
+            
+            if (imageInfo?.id) {
               data[type] = {
                 ...parsed,
-                imageUrl: `https://plan.navcanada.ca/weather/images/${parsed.frame_lists[0].frames[0].images[0].id}.image`
+                imageUrl: `https://plan.navcanada.ca/weather/images/${imageInfo.id}.image`,
+                timestamp: imageInfo.created,
               };
             }
           } catch (e) {
-            console.error('Failed to parse radar data:', e);
+            console.error('Failed to parse radar data JSON:', e);
           }
         }
       }
@@ -32,6 +37,11 @@ const RadarDisplay = ({ imageData }) => {
   const activeRadar = radarData[activeType];
 
   if (availableTypes.length === 0) return null;
+
+  // Set a default active type if the current one isn't available
+  if (availableTypes.length > 0 && !radarData[activeType]) {
+    setActiveType(availableTypes[0]);
+  }
 
   return (
     <div className="py-4">
@@ -48,7 +58,8 @@ const RadarDisplay = ({ imageData }) => {
                   : 'bg-gray-200 text-gray-700'
               }`}
             >
-              {type === 'COMPOSITE' ? 'EchoTop' : type}
+              {/* Simple name mapping */}
+              {type === 'COMPOSITE' ? 'EchoTop' : type.replace('CAPPI_', '').replace('_', ' ')}
             </button>
           ))}
         </div>
@@ -62,7 +73,7 @@ const RadarDisplay = ({ imageData }) => {
             className="w-full h-auto rounded border"
           />
           <div className="text-center text-sm text-gray-600 mt-2">
-            {new Date(activeRadar.frame_lists[0].frames[0].images[0].created).toLocaleTimeString()}
+            {new Date(activeRadar.timestamp).toLocaleTimeString()}
           </div>
         </div>
       ) : (
